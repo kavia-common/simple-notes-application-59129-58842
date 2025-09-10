@@ -1,82 +1,95 @@
-# Lightweight React Template for KAVIA
+# Simple Notes Frontend (React + Supabase)
 
-This project provides a minimal React template with a clean, modern UI and minimal dependencies.
+A lightweight, responsive notes application UI built with React and integrated with Supabase for CRUD operations.
 
 ## Features
 
-- **Lightweight**: No heavy UI frameworks - uses only vanilla CSS and React
-- **Modern UI**: Clean, responsive design with KAVIA brand styling
-- **Fast**: Minimal dependencies for quick loading times
-- **Simple**: Easy to understand and modify
+- Create, view, edit, and delete notes
+- Responsive, accessible UI with light/dark theme toggle
+- Clear error handling and status indicators
+- Minimal dependencies, fast and clean
 
-## Getting Started
+## Environment Variables
 
-In the project directory, you can run:
+Create a `.env` file in the project root with:
 
-### `npm start`
-
-Runs the app in development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-### `npm test`
-
-Launches the test runner in interactive watch mode.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-## Customization
-
-### Colors
-
-The main brand colors are defined as CSS variables in `src/App.css`:
-
-```css
-:root {
-  --kavia-orange: #E87A41;
-  --kavia-dark: #1A1A1A;
-  --text-color: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --border-color: rgba(255, 255, 255, 0.1);
-}
+```
+REACT_APP_SUPABASE_URL=your_supabase_project_url
+REACT_APP_SUPABASE_KEY=your_supabase_anon_public_key
 ```
 
-### Components
+Do NOT commit secrets to source control.
 
-This template uses pure HTML/CSS components instead of a UI framework. You can find component styles in `src/App.css`. 
+## Supabase Setup
 
-Common components include:
-- Buttons (`.btn`, `.btn-large`)
-- Container (`.container`)
-- Navigation (`.navbar`)
-- Typography (`.title`, `.subtitle`, `.description`)
+Create a table named `notes` with the following suggested schema:
 
-## Learn More
+```sql
+create table if not exists public.notes (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  content text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+-- optional: keep updated_at in sync
+create or replace function public.set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
 
-### Code Splitting
+drop trigger if exists notes_set_updated_at on public.notes;
+create trigger notes_set_updated_at
+before update on public.notes
+for each row execute procedure public.set_updated_at();
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+-- RLS (optional if enabling)
+-- alter table public.notes enable row level security;
+-- create policy "Public read/write notes" on public.notes
+-- for select using (true)
+-- for insert with check (true)
+-- for update using (true)
+-- for delete using (true);
+```
 
-### Analyzing the Bundle Size
+Adjust policies to your security needs.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Development
 
-### Making a Progressive Web App
+Install dependencies and start the app:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+```
+npm install
+npm start
+```
 
-### Advanced Configuration
+Open http://localhost:3000 to use the app.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Scripts
 
-### Deployment
+- `npm start` - Start dev server
+- `npm test` - Run tests
+- `npm run build` - Build for production
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## Project Structure
 
-### `npm run build` fails to minify
+- `src/lib/supabaseClient.js` - Supabase client (uses env vars)
+- `src/services/notesService.js` - CRUD operations
+- `src/components/NoteForm.js` - Form for create/edit
+- `src/components/NotesList.js` - Notes listing
+- `src/App.js` - App shell and views
+- `src/App.css` - Styles and responsive layout
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Troubleshooting
+
+- If you see "Supabase is not configured", verify `.env` variables and restart dev server.
+- Ensure table name is `notes` and fields match service expectations.
+- Check browser console for Supabase error details.
+
+## License
+
+MIT
